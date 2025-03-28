@@ -1,38 +1,10 @@
 /////////////////////////////////////////////////////
-// CIS 658 W25 Homework 10: React Parts 1 and 2
+// CIS 658 W25 Homework 11: React Parts 3 and 4
 // Jack Wildes
 /////////////////////////////////////////////////////
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
-
-// Using made-up faculty and committees for now (non-GVSU specific)
-const facultyData = [
-  {
-    id: 1,
-    name: "Dr. James Smith",
-    department: "CIS",
-    committees: ["Curriculum Committee", "Technology Committee"],
-  },
-  {
-    id: 2,
-    name: "Dr. John Doe",
-    department: "Mathematics",
-    committees: ["Scholarships Committee", "Hiring Committee"],
-  },
-  {
-    id: 3,
-    name: "Dr. Jane Doe",
-    department: "Physics",
-    committees: ["Research Committee"],
-  },
-  {
-    id: 4,
-    name: "Dr. Jill Smith",
-    department: "Nursing",
-    committees: ["Scholarships Committee"],
-  }
-];
 
 // Get name of the committee in a list
 function Committee({ name }) {
@@ -54,7 +26,7 @@ function CommitteeList({ committees }) {
 function FacultyForm({ onSave, faculty, onCancel }) {
   // Initialize state to either faculty’s existing information or empty details if adding new faculty
   const [formData, setFormData] = useState(
-    faculty || { name: "", department: "", committees: "" }
+    faculty || { name: "", department: "", committees: [] }
   );
 
   // Set the faculty form data input values
@@ -85,7 +57,7 @@ function FacultyForm({ onSave, faculty, onCancel }) {
 }
 
 // Show or hide faculty member details (department, committees) on click
-function FacultyMember({ faculty, onSave }) {
+function FacultyMember({ faculty, onSave, onDelete }) {
   // Set default state for button expanded and editing
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -114,6 +86,7 @@ function FacultyMember({ faculty, onSave }) {
               <h4>Committees:</h4>
               <CommitteeList committees={faculty.committees} />
               <button onClick={toggleEdit}>Edit</button>
+              <button onClick={() => onDelete(faculty.id)}>Delete</button>
             </>
           )}
         </div>
@@ -125,16 +98,45 @@ function FacultyMember({ faculty, onSave }) {
 // Display full list of faculty
 function FacultyList() {
   // Initialize state for the list of faculty members
-  const [facultyList, setFacultyList] = useState(facultyData);
+  const [facultyList, setFacultyList] = useState([]);
 
-  // Update faculty list by either replacing existing faculty member or adding new faculty member with new id
+  // Set fetch URL for API faculty data from Rails
+  useEffect(() => {
+    fetch("http://localhost:3001/faculties")
+      .then(res => res.json())
+      .then(setFacultyList)
+      .catch(err => console.error("Error loading faculty:", err));
+  }, []);
+
+  // Update faculty list by either replacing existing faculty member or adding new faculty member with new id in the Rails API
   const saveFaculty = (newFaculty) => {
-    setFacultyList((prev) => {
-      if (newFaculty.id) {
-        return prev.map(fac => (fac.id === newFaculty.id ? newFaculty : fac));
-      }
-      return [...prev, { ...newFaculty, id: prev.length + 1 }];
-    });
+    const method = newFaculty.id ? "PUT" : "POST";
+    const url = newFaculty.id
+      ? `http://localhost:3001/faculties/${newFaculty.id}`
+      : "http://localhost:3001/faculties";
+
+    fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newFaculty),
+    })
+      .then(res => res.json())
+      .then(updatedFaculty => {
+        setFacultyList(prev =>
+          newFaculty.id
+            ? prev.map(fac => (fac.id === updatedFaculty.id ? updatedFaculty : fac))
+            : [...prev, updatedFaculty]
+        );
+      });
+  };
+
+  // Delete faculty from the list in the Rails API
+  const deleteFaculty = (id) => {
+    if (window.confirm("Are you sure you want to delete this faculty member?")) {
+      fetch(`http://localhost:3001/faculties/${id}`, { method: "DELETE" })
+        .then(() => setFacultyList(prev => prev.filter(fac => fac.id !== id)))
+        .catch(err => console.error("Error deleting faculty:", err));
+    }
   };
 
   // Display list of faculty, each having an editable form, and a separate form at the bottom to add new faculty
@@ -142,7 +144,12 @@ function FacultyList() {
     <div className="faculty-list">
       <h1>College Faculty & Committees</h1>
       {facultyList.map(faculty => (
-        <FacultyMember key={faculty.id} faculty={faculty} onSave={saveFaculty} />
+        <FacultyMember 
+          key={faculty.id} 
+          faculty={faculty} 
+          onSave={saveFaculty} 
+          onDelete={deleteFaculty} 
+        />
       ))}
       <h2>Add New Faculty</h2>
       <FacultyForm onSave={saveFaculty} />

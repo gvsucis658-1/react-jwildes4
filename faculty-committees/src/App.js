@@ -102,7 +102,7 @@ function FacultyList() {
 
   // Set fetch URL for API faculty data from Rails
   useEffect(() => {
-    fetch("http://localhost:3001/faculties")
+    fetch("https://rails-api-jwildes4.fly.dev/faculties")
       .then(res => res.json())
       .then(setFacultyList)
       .catch(err => console.error("Error loading faculty:", err));
@@ -112,8 +112,8 @@ function FacultyList() {
   const saveFaculty = (newFaculty) => {
     const method = newFaculty.id ? "PUT" : "POST";
     const url = newFaculty.id
-      ? `http://localhost:3001/faculties/${newFaculty.id}`
-      : "http://localhost:3001/faculties";
+      ? `https://rails-api-jwildes4.fly.dev/faculties/${newFaculty.id}`
+      : "https://rails-api-jwildes4.fly.dev/faculties";
 
     fetch(url, {
       method,
@@ -133,7 +133,7 @@ function FacultyList() {
   // Delete faculty from the list in the Rails API
   const deleteFaculty = (id) => {
     if (window.confirm("Are you sure you want to delete this faculty member?")) {
-      fetch(`http://localhost:3001/faculties/${id}`, { method: "DELETE" })
+      fetch(`https://rails-api-jwildes4.fly.dev/faculties/${id}`, { method: "DELETE" })
         .then(() => setFacultyList(prev => prev.filter(fac => fac.id !== id)))
         .catch(err => console.error("Error deleting faculty:", err));
     }
